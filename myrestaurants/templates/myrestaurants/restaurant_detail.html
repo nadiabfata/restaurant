@@ -1,0 +1,125 @@
+{% load staticfiles %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<link rel="stylesheet" href="{% static "style/base.css" %}" />
+<title>{% block title %}MyRestaurants by MyRecommentdations.org{% endblock %}</title>
+</head>
+
+<body>
+
+<div id="header">
+  {% block header %}
+  {% if user.username %}<p>User {{ user.username }}</p>
+  {% else %}<p><a href="/login/">Sign in</a></p>{% endif %}
+  {% endblock %}
+</div>
+
+<div id="sidebar">
+  {% block sidebar %}<ul><li><a href="/myrestaurants">Home</a></li></ul>{% endblock %}
+</div>
+
+<div id="content">
+  {% block content %}
+  {% if error_message %}<p><strong>{{ error_message}}</strong></p>{% endif %}
+  {% endblock %}
+</div>
+
+<div id="footer">
+  {% block footer %}{% endblock %}
+</div>
+
+</body>
+
+</html>
+Next create restaurant_list.html in myrestaurants/templates/myrestaurants
+
+{% extends "myrestaurants/base.html" %}
+
+{% block content %}
+<h1>
+  Restaurants 
+  {% if user %}(<a href="{% url 'myrestaurants:restaurant_create' %}">add</a>){% endif %}
+</h1>
+
+<ul>
+  {% for restaurant in latest_restaurant_list %}
+    <li><a href="{% url 'myrestaurants:restaurant_detail' restaurant.id %}">
+    {{ restaurant.name }}</a></li>
+  {% empty %}<li>Sorry, no restaurants registered yet.</li>
+  {% endfor %}
+</ul>
+{% endblock %}
+And restaurant_detail.html, which includes the list of dishes and the
+review form also in myrestaurants/templates/myrestaurants
+
+{% extends "myrestaurants/base.html" %}
+
+{% block content %}
+<h1>
+  {{ restaurant.name }}
+  {% if user == restaurant.user %}
+    (<a href="{% url 'myrestaurants:restaurant_edit' restaurant.id %}">edit</a>)
+  {% endif %}
+</h1>
+
+<h2>Address:</h2>
+
+<p>
+  {{ restaurant.street }}, {{ restaurant.number }} <br/>
+  {{ restaurant.zipcode }} {{ restaurant.city }} <br/>
+  {{ restaurant.stateOrProvince }} ({{ restaurant.country }})
+</p>
+
+<h2>Dishes
+  {% if user %}
+    (<a href="{% url 'myrestaurants:dish_create' restaurant.id %}">add</a>)
+  {% endif %}
+</h2>
+
+<ul>
+  {% for dish in restaurant.dishes.all %}
+    <li><a href="{% url 'myrestaurants:dish_detail' restaurant.id dish.id %}">
+    {{ dish.name }}</a></li>
+  {% empty %}<li>Sorry, no dishes for this restaurant yet.</li>
+  {% endfor %}
+</ul>
+
+<h2>Reviews</h2>
+
+<ul>
+  {% for review in restaurant.restaurantreview_set.all %}
+    <li>
+      <p>{{ review.rating }} star{{ review.rating|pluralize }}</p>
+      <p>{{ review.comment }}</p>
+      <p>Created by {{ review.user }} on {{ review.date }}</p>
+    </li>
+  {% endfor %}
+</ul>
+
+<h3>Add Review</h3>
+
+<form action="{% url 'myrestaurants:review_create' restaurant.id %}" method="post">
+  {% csrf_token %}
+
+  Message: <textarea name="comment" id="comment" rows="4"></textarea>
+  <p>Rating:</p>
+  <p>
+    {% for rate in RATING_CHOICES %}
+      <input type="radio" name="rating" id="rating{{ forloop.counter }}" value="{{ rate.0 }}" />
+      <label for="choice{{ forloop.counter }}">{{ rate.1 }} star{{rate.0|pluralize }}</label>
+      <br/>
+    {% endfor %}
+  </p>
+  <input type="submit" value="Review" />
+</form>
+
+{% endblock %}
+
+{% block footer %}
+
+Created by {{ restaurant.user }} on {{ restaurant.date }}
+
+{% endblock %}
